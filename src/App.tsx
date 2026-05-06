@@ -1,5 +1,3 @@
-SURE ONLY ONE LIVE AUDIO NO DUPLICATE
-
 import { useEffect, useMemo, useState, useRef, type FormEvent } from 'react';
 import { auth, rtdb, handleDatabaseError, OperationType } from './firebase';
 import {
