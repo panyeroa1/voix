@@ -1,3 +1,5 @@
+SURE ONLY ONE LIVE AUDIO NO DUPLICATE
+
 import { useEffect, useMemo, useState, useRef, type FormEvent } from 'react';
 import { auth, rtdb, handleDatabaseError, OperationType } from './firebase';
 import {
@@ -480,7 +482,7 @@ const GOOGLE_SERVICE_TOOLS =[
         notes: { type: Type.STRING, description: 'Optional notes.' },
         due: { type: Type.STRING, description: 'Optional due date in ISO format.' },
       },
-      required: ['title'],
+      required:['title'],
     },
   },
   {
@@ -1399,7 +1401,7 @@ function MeetingRecorderModal({
                <div className="relative flex items-center justify-center w-48 h-48 mb-10">
                  {isRecording && (
                    <motion.div
-                     animate={{ scale: [1, 1 + micLevel * 0.6, 1], opacity:[0.3, 0.7, 0.3] }}
+                     animate={{ scale:[1, 1 + micLevel * 0.6, 1], opacity:[0.3, 0.7, 0.3] }}
                      transition={{ duration: 0.1, repeat: Infinity }}
                      className="absolute inset-0 bg-lime-300/30 rounded-full blur-2xl"
                    />
@@ -1451,9 +1453,9 @@ function MeetingRecorderModal({
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const[loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState<AgentSettings>(DEFAULT_SETTINGS);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'reset'>('signin');
-  const [authName, setAuthName] = useState('');
+  const[settings, setSettings] = useState<AgentSettings>(DEFAULT_SETTINGS);
+  const[authMode, setAuthMode] = useState<'signin' | 'signup' | 'reset'>('signin');
+  const[authName, setAuthName] = useState('');
   const[authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const[authConfirmPassword, setAuthConfirmPassword] = useState('');
@@ -1847,7 +1849,7 @@ function BeatriceAgent({
   onLogout: () => void; 
   initialSettings: AgentSettings; 
 }) {
-  const [isActive, setIsActive] = useState(false);
+  const[isActive, setIsActive] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const[isAgentSpeaking, setIsAgentSpeaking] = useState(false);
   const[micLevel, setMicLevel] = useState(0);
@@ -1861,12 +1863,12 @@ function BeatriceAgent({
 
   const[isMuted, setIsMuted] = useState(false);
   const[isVideoEnabled, setIsVideoEnabled] = useState(false);
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const[facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [showSidebar, setShowSidebar] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const[showMeetingRecorder, setShowMeetingRecorder] = useState(false);
   const [chatInput, setChatInput] = useState('');
-  const [settings, setSettings] = useState<AgentSettings>({ ...DEFAULT_SETTINGS, ...initialSettings });
+  const[settings, setSettings] = useState<AgentSettings>({ ...DEFAULT_SETTINGS, ...initialSettings });
 
   const aiRef = useRef<GoogleGenAI | null>(null);
   const sessionRef = useRef<any>(null);
@@ -2700,9 +2702,10 @@ function BeatriceAgent({
     userTranscriptBufferRef.current = '';
 
     try {
-      if (!audioStreamerRef.current) {
-        audioStreamerRef.current = new AudioStreamer();
+      if (audioStreamerRef.current) {
+        try { audioStreamerRef.current.stop(); } catch(e) {}
       }
+      audioStreamerRef.current = new AudioStreamer();
       await audioStreamerRef.current.init(24000);
 
       const hasGoogleServiceAccess = Boolean(localStorage.getItem('googleAccessToken'));
@@ -2736,8 +2739,8 @@ function BeatriceAgent({
         `Never invent files, links, emails, calendar events, search results, document contents, or completed actions. If a tool was not used, answer only from conversation context. If a tool fails, report the actual failure briefly.`,
         
         `=== LANGUAGE & TONE RULES ===`,
-        `Your primary speaking language is ${settings.selectedLanguage}. Always respond in ${settings.selectedLanguage} unless the user explicitly switches languages. You are natively fluent in ${settings.selectedLanguage}.`,
-        `CRITICAL: You MUST sound exactly like a normal, natural human being. Use natural conversational pacing, occasional filler words (like "um", "ah", "let's see"), and human-like intonation. Never sound robotic, artificial, or like a typical AI assistant.`
+        `Your primary speaking language is ${settings.selectedLanguage}. Always respond in ${settings.selectedLanguage} unless the user explicitly switches languages. You are natively fluent in ${settings.selectedLanguage} and can speak any other language natively if required.`,
+        `CRITICAL: You MUST sound exactly like a normal, natural human being. Use natural conversational pacing, occasional filler words, and human-like intonation. Never sound robotic, artificial, or like a typical AI assistant.`
       ].filter(Boolean).join('\n\n');
 
       const session = await aiRef.current.live.connect({
@@ -2788,7 +2791,11 @@ function BeatriceAgent({
               const serverContent: any = msg.serverContent;
               
               if (serverContent.interrupted) { 
-                audioStreamerRef.current?.stop(); 
+                if (audioStreamerRef.current) {
+                  try { audioStreamerRef.current.stop(); } catch(e) {}
+                  audioStreamerRef.current = new AudioStreamer();
+                  audioStreamerRef.current.init(24000);
+                }
                 setIsAgentSpeaking(false); 
                 modelTranscriptBufferRef.current = ''; 
                 return; 
@@ -2840,7 +2847,7 @@ function BeatriceAgent({
       sessionRef.current = session;
 
       if (audioRecorderRef.current) {
-        audioRecorderRef.current.stop();
+        try { audioRecorderRef.current.stop(); } catch(e) {}
       }
 
       audioRecorderRef.current = new AudioRecorder((base64) => { 
@@ -2883,10 +2890,6 @@ function BeatriceAgent({
         
         setIsVideoEnabled(true);
         
-        setTimeout(() => { 
-          sendTextToLive(`[SYSTEM: User just opened the camera. Acknowledge this normally and briefly describe what is visible.]`); 
-        }, 300);
-        
         videoIntervalRef.current = setInterval(() => {
           if (!videoRef.current || !canvasRef.current || !sessionRef.current) return;
           
@@ -2920,10 +2923,6 @@ function BeatriceAgent({
       }
       
       setIsVideoEnabled(false);
-      
-      setTimeout(() => { 
-        sendTextToLive(`[SYSTEM: User closed the camera.]`); 
-      }, 150);
     }
   };
 
@@ -2969,8 +2968,6 @@ function BeatriceAgent({
           videoRef.current.srcObject = stream; 
           videoRef.current.play().catch(e => console.error('Video play err', e)); 
         }
-        
-        sendTextToLive(`[SYSTEM: User switched camera facing mode to ${newMode}.]`);
       } catch (e) { 
         console.error('Camera switch error:', e); 
       }
@@ -3089,6 +3086,8 @@ function BeatriceAgent({
     }
     
     sessionRef.current = null; 
+    audioStreamerRef.current = null;
+    audioRecorderRef.current = null;
     modelTranscriptBufferRef.current = ''; 
     userTranscriptBufferRef.current = ''; 
     isActiveRef.current = false;
